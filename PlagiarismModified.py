@@ -82,6 +82,25 @@ st.title("Plagiarism Checker")
 # Upload a new file
 uploaded_file = st.file_uploader("Upload a new file (in .txt format):", type=["txt"])
 
+# Calculate similarity with existing files
+similarity_scores_existing = []
+
+for i, (file_name1, text_vector1) in enumerate(existing_files):
+    scores_for_file = []
+
+    for j, (file_name2, text_vector2) in enumerate(existing_files):
+        if i != j:  # Avoid comparing the same file to itself
+            sim_score = similarity(text_vector1, text_vector2)
+            scores_for_file.append(sim_score)
+
+    if scores_for_file:
+        avg_similarity = np.mean(scores_for_file)
+        similarity_scores_existing.append((file_name1, avg_similarity))
+
+# Create a DataFrame for existing files' average similarity scores
+existing_files_df = pd.DataFrame(similarity_scores_existing, columns=['File', 'Average Similarity Score'])
+
+# Display the file upload option
 if uploaded_file is not None:
     # Read the uploaded file as binary data
     uploaded_content = uploaded_file.read()
@@ -111,13 +130,17 @@ if uploaded_file is not None:
     # Create a DataFrame to display results
     results_df = pd.DataFrame(results_data, columns=['File1', 'File2', 'Similarity Score'])
 
-    # Display the average plagiarism score as a progress bar
+    # Display the average plagiarism score of the uploaded file as a progress bar
     st.subheader("Results")
     st.progress(avg_similarity)
 
     # Display the percentage text alongside the progress bar using HTML
-    st.markdown(f"<div class='progress-text'>Average Plagiarism Score: {avg_similarity:.2%}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='progress-text'>Average Plagiarism Score with Existing Files: {avg_similarity:.2%}</div>", unsafe_allow_html=True)
 
     # Display the similarity score and results
     st.subheader("Similarity with Existing Files")
     st.dataframe(results_df)
+
+# Display the average similarity scores of existing files with each other
+st.subheader("Average Similarity Scores of Existing Files")
+st.dataframe(existing_files_df)
