@@ -135,12 +135,12 @@ if uploaded_file is not None:
     st.progress(avg_similarity)
 
     # Display the percentage text alongside the progress bar using HTML
-    st.markdown(f"<div class='progress-text'>Average Plagiarism Score with Existing Files: {avg_similarity:.2%}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='progress-text'>Plagiarism Score with Existing Files: {avg_similarity:.2%}</div>", unsafe_allow_html=True)
 
     # Display the similarity score and results
     st.subheader("Similarity with Existing Files")
     st.dataframe(results_df)
 
 # Display the average similarity scores of existing files with each other
-st.subheader("Average Similarity Scores of Existing Files")
+st.subheader("Similarity Scores of Existing Files")
 st.dataframe(existing_files_df)
