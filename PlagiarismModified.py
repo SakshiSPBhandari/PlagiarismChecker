@@ -55,6 +55,7 @@ st.markdown(
 nltk.download('punkt')
 nltk.download('stopwords')
 
+
 # Function to preprocess text
 def preprocess_text(text):
     text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
@@ -65,9 +66,11 @@ def preprocess_text(text):
     filtered_tokens = [stemmer.stem(token) for token in tokens if token not in stop_words]
     return ' '.join(filtered_tokens)
 
+
 # Function to calculate similarity
 def similarity(doc1, doc2):
     return cosine_similarity(doc1.reshape(1, -1), doc2.reshape(1, -1))[0][0]
+
 
 # Load the pre-trained TF-IDF vectorizer and existing files from pickle files
 with open('tfidf_vectorizer.pickle', 'rb') as vectorizer_file:
@@ -111,36 +114,68 @@ if uploaded_file is not None:
     # Preprocess the text
     preprocessed_new_file_content = preprocess_text(uploaded_text)
 
-    # Continue with the rest of your code as before
-    new_vector = tfidf_vectorizer.transform([preprocessed_new_file_content]).toarray()
+    # Check if a file with the same name already exists in the list
+    existing_file_names = [file_name for file_name, _ in existing_files]
 
-    # Calculate similarity with existing files
-    similarity_scores = []
-    results_data = []
+    if uploaded_file.name not in existing_file_names:
+        # Continue with the rest of your code as before
+        new_vector = tfidf_vectorizer.transform([preprocessed_new_file_content]).toarray()
 
-    for file_name, text_vector in existing_files:
-        sim_score = similarity(new_vector, text_vector)
-        similarity_scores.append(sim_score)
-        file_pair = sorted((uploaded_file.name, file_name))
-        score = (file_pair[0], file_pair[1], sim_score)
-        results_data.append(score)
+        # Append the newly uploaded file to the existing files list
+        existing_files.append((uploaded_file.name, new_vector))
 
-    avg_similarity = np.mean(similarity_scores)
+        # Calculate similarity with existing files (including the newly uploaded file)
+        similarity_scores = []
+        results_data = []
 
-    # Create a DataFrame to display results
-    results_df = pd.DataFrame(results_data, columns=['File1', 'File2', 'Similarity Score'])
+        for file_name, text_vector in existing_files:
+            if file_name != uploaded_file.name:
+                sim_score = similarity(new_vector, text_vector)
+                similarity_scores.append(sim_score)
+                file_pair = sorted((uploaded_file.name, file_name))
+                score = (file_pair[0], file_pair[1], sim_score)
+                results_data.append(score)
 
-    # Display the average plagiarism score of the uploaded file as a progress bar
-    st.subheader("Results")
-    st.progress(avg_similarity)
+        avg_similarity = np.mean(similarity_scores)
 
-    # Display the percentage text alongside the progress bar using HTML
-    st.markdown(f"<div class='progress-text'>Plagiarism Score with Existing Files: {avg_similarity:.2%}</div>", unsafe_allow_html=True)
+        # Create a DataFrame to display results
+        results_df = pd.DataFrame(results_data, columns=['File1', 'File2', 'Similarity Score'])
 
-    # Display the similarity score and results
-    st.subheader("Similarity with Existing Files")
-    st.dataframe(results_df)
+        # Display the average plagiarism score of the uploaded file as a progress bar
+        st.subheader("Results")
+        st.progress(avg_similarity)
 
-# Display the average similarity scores of existing files with each other
-st.subheader("Similarity Scores of Existing Files")
+        # Display the percentage text alongside the progress bar using HTML
+        st.markdown(
+            f"<div class='progress-text'>Average Plagiarism Score with Existing Files: {avg_similarity:.2%}</div>",
+            unsafe_allow_html=True)
+
+        # Display the similarity score and results
+        st.subheader("Similarity with Existing Files")
+        st.dataframe(results_df)
+
+# Create a new DataFrame for updated existing files' average similarity scores
+similarity_scores_updated = []
+
+for i, (file_name1, text_vector1) in enumerate(existing_files):
+    scores_for_file = []
+
+    for j, (file_name2, text_vector2) in enumerate(existing_files):
+        if i != j:  # Avoid comparing the same file to itself
+            sim_score = similarity(text_vector1, text_vector2)
+            scores_for_file.append(sim_score)
+
+    if scores_for_file:
+        avg_similarity = np.mean(scores_for_file)
+        similarity_scores_updated.append((file_name1, avg_similarity))
+
+# Create a new DataFrame for updated existing files' average similarity scores
+existing_files_df = pd.DataFrame(similarity_scores_updated, columns=['File', 'Average Similarity Score'])
+
+# Display the updated list of existing files and their average similarity scores
+st.subheader("List of Existing Files")
 st.dataframe(existing_files_df)
+
+# Save the updated existing files list to a pickle file
+with open('existing_files.pickle', 'wb') as files_file:
+    pickle.dump(existing_files, files_file)
